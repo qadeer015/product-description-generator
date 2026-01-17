@@ -5,9 +5,14 @@ A Chrome extension that automatically generates SEO-friendly product description
 ## ✨ Features
 
 - **🚀 One-Click Generation**: Generate both short and long product descriptions instantly
-- **🔐 Secure API Key Management**: Store API keys securely using Chrome's sync storage
+- **🔐 Secure API Key Management**: Store multiple API keys securely using Chrome's sync storage
 - **☁️ Cloud Sync**: Settings sync across all your devices automatically
 - **🎯 Smart Parsing**: Auto-fills form fields on product edit pages
+- **⚡ Auto-Generate**: Automatically generate descriptions when navigating to product edit pages
+- **💾 Auto-Save**: Automatically save products after description generation
+- **🔄 Multiple API Keys**: Rotate between multiple Gemini API keys for better rate limiting
+- **🎨 Floating Button**: Quick access button for generating descriptions without opening the popup
+- **📱 Custom API Endpoint**: Configure custom Gemini API endpoints
 
 ## 📋 Requirements
 
@@ -50,60 +55,37 @@ Your settings are now encrypted and synced to your Chrome account!
 4. Review the generated content and make any edits if needed
 5. Save your product
 
-## 🏗️ Architecture
+## ⚙️ Advanced Settings
 
-### Component Overview
+### Auto-Generate Descriptions
+Enable this option to automatically generate descriptions whenever you navigate to a product edit page. Perfect for bulk editing!
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Chrome Extension                 │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  ┌──────────────┐  ┌──────────────┐                │
-│  │   Popup      │  │  Settings    │                │
-│  │  (popup.js)  │  │  (settings)  │                │
-│  └──────┬───────┘  └──────┬───────┘                │
-│         │                  │                        │
-│         └──────────────┬───┘                        │
-│                        │                            │
-│              ┌─────────▼──────────┐                │
-│              │ Background Service │                │
-│              │   (background.js)  │                │
-│              │  - Settings Mgmt   │                │
-│              │  - Message Router  │                │
-│              └────────┬───────────┘                │
-│                       │                            │
-│              ┌────────▼──────────┐                │
-│              │  Content Script   │                │
-│              │ (content.js)      │                │
-│              │ - UI Injection    │                │
-│              │ - Description Gen │                │
-│              │ - Form Filling    │                │
-│              └───────────────────┘                │
-│                       │                            │
-│              ┌────────▼──────────┐                │
-│              │  Gemini API       │                │
-│              │ (Google AI)       │                │
-│              └───────────────────┘                │
-└─────────────────────────────────────────────────────┘
-```
+1. Open Settings
+2. Check **Auto-Generate Descriptions**
+3. Click **Save Settings**
+4. Descriptions will now generate automatically within 1-2 seconds of page load
 
-### Message Flow
+### Auto-Save Products
+Automatically save products after description generation to streamline your workflow.
 
-```
-User Action (Click Button)
-    ↓
-Popup sends: { type: 'GENERATE_DESCRIPTION' }
-    ↓
-Content Script Receives Message
-    ↓
-Content Script Requests Settings from Background Service Worker
-    ↓
-Background Service Worker Returns API Key (from chrome.storage.sync)
-    ↓
-Content Script Calls Gemini API
-    ↓
-Content Script Auto-fills Form Fields
-    ↓
-Status Update Shown (Descriptions Generated!)
-```
+1. Open Settings
+2. Check **Auto-Save Product**
+3. Click **Save Settings**
+4. Products will be saved immediately after descriptions are generated
+
+### Multiple API Keys
+Manage and rotate between multiple Gemini API keys to handle rate limiting better.
+
+1. Open Settings
+2. Enter your API keys (one per line)
+3. Select the primary API key to use
+4. Click **Save Settings**
+5. The extension will use the selected key and rotate through alternatives if rate limited
+
+### Custom API Endpoint
+For advanced users who want to use custom or alternative endpoints:
+
+1. Open Settings
+2. Modify the **API Endpoint** field
+3. Click **Save Settings**
+4. Default: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
