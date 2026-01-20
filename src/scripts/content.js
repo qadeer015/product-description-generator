@@ -408,17 +408,33 @@ class DescriptionGenerator {
 
     async generateDescription() {
         const STATIC_PROMPT = `
-You are an expert marketplace product copywriter.
+You are an expert marketplace product copywriter specializing in medical and surgical products for online sales platforms.
 
 Rules:
-- Write SEO-friendly content
-- Plagiarism-free
-- Simple English
-- Use {{productName}} instead of the actual product name
+
+* Write SEO-friendly content optimized for medical and healthcare-related searches
+* Use simple, clear, and professional English suitable for end users and healthcare buyers
+* Ensure plagiarism-free and original content
+* Accurately represent the product features, benefits, and real use cases
+* Write from the end-user perspective, focusing on usability, safety, and reliability
+* Use {{productName}} instead of the actual product name
+* Naturally include relevant and easy-to-understand keywords such as medical equipment, surgical instruments, healthcare supplies, hospital use, clinical use, home care, durable, safe, sterile, professional quality, and online medical store where applicable
+* Avoid exaggerated or misleading claims and comply with medical product standards
 
 Generate:
+
 1. Short Description (40–60 words)
+
+   * Brief overview of the product
+   * Key benefit and primary use
+   * Include 1 to 2 high-impact SEO keywords
+
 2. Long Description (120–150 words)
+
+   * Detailed explanation of product purpose, features, and benefits
+   * Suitable applications such as hospital, clinic, or home healthcare use
+   * Highlight quality, safety, and ease of use
+   * Include relevant SEO keywords naturally for better search visibility
 
 Output format:
 Short Description:
