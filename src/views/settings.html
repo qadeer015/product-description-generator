@@ -24,11 +24,16 @@
                 <div id="apiKeysContainer" class="api-keys-container">
                     <!-- API key fields will be added here dynamically -->
                 </div>
-                <button type="button" class="btn-add-key" id="addKeyBtn">+ Add API Key</button>
+                <div class="api-key-buttons">
+                    <button type="button" class="btn-add-key" id="addKeyBtn">Add New API Key</button>
+                    <button type="button" class="btn-add-key" id="uploadKeysBtn">Import API Keys</button>
+                    <button type="button" class="btn-add-key" id="exportKeysBtn">Export Keys</button>
+                </div>
                 <div class="help-text">
                     Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI
                         Studio</a>
                 </div>
+                <input type="file" id="keysFileInput" accept=".txt" style="display: none;">
             </div>
 
             <div class="form-group">

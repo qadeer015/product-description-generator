@@ -125,6 +125,9 @@ class SettingsUI {
         const form = document.getElementById('settingsForm');
         const resetBtn = document.getElementById('resetBtn');
         const addKeyBtn = document.getElementById('addKeyBtn');
+        const uploadKeysBtn = document.getElementById('uploadKeysBtn');
+        const exportKeysBtn = document.getElementById('exportKeysBtn');
+        const fileInput = document.getElementById('keysFileInput');
 
         form.addEventListener('submit', (e) => this.handleSave(e));
         resetBtn.addEventListener('click', () => this.handleReset());
@@ -133,11 +136,182 @@ class SettingsUI {
             this.handleAddApiKey();
         });
 
+        uploadKeysBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            fileInput.click();
+        });
+
+        exportKeysBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.handleExportKeys();
+        });
+
+        fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+
         // Listen for changes in other tabs
         this.settingsManager.addListener((settings) => {
             this.loadCurrentSettings();
             this.showMessage('Settings updated in another tab', 'info');
         });
+    }
+
+
+
+    async handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Check file type
+        if (!file.name.toLowerCase().endsWith('.txt')) {
+            this.showMessage('Please upload a .txt file', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        // Check file size (max 10KB)
+        if (file.size > 10 * 1024) {
+            this.showMessage('File is too large. Maximum size is 10KB', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        try {
+            const text = await file.text();
+            const keys = this.parseKeysFromFile(text);
+
+            if (keys.length === 0) {
+                this.showMessage('No valid API keys found in the file', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            // Show import statistics
+            this.showImportStatistics(keys, file.name);
+
+            // Clear the file input
+            event.target.value = '';
+
+        } catch (error) {
+            console.error('Error reading file:', error);
+            this.showMessage('Error reading file: ' + error.message, 'error');
+            event.target.value = '';
+        }
+    }
+
+    parseKeysFromFile(text) {
+        const lines = text.split('\n');
+        const keys = [];
+        const stats = {
+            totalLines: lines.length,
+            emptyLines: 0,
+            duplicateKeys: 0,
+            invalidKeys: 0,
+            validKeys: 0
+        };
+
+        const existingKeys = this.settingsManager.getApiKeys();
+        const seenKeys = new Set(existingKeys);
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            if (line === '') {
+                stats.emptyLines++;
+                continue;
+            }
+
+            // Basic validation - API keys usually have a specific pattern
+            // Gemini API keys start with "AIza" and are about 39 characters
+            if (line.length < 30 || line.length > 100) {
+                stats.invalidKeys++;
+                continue;
+            }
+
+            // Check for duplicates
+            if (seenKeys.has(line)) {
+                stats.duplicateKeys++;
+                continue;
+            }
+
+            // Valid key
+            keys.push(line);
+            seenKeys.add(line);
+            stats.validKeys++;
+        }
+
+        this.lastImportStats = stats;
+        return keys;
+    }
+
+    showImportStatistics(keys, fileName) {
+        const stats = this.lastImportStats;
+        const container = document.getElementById('apiKeysContainer');
+
+        // Create stats display
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'key-import-stats success';
+        statsDiv.innerHTML = `
+            <strong>File: ${fileName}</strong>
+            <ul class="key-stats-list">
+                <li>Total lines: ${stats.totalLines}</li>
+                <li>Empty lines: ${stats.emptyLines}</li>
+                <li>Valid keys found: ${stats.validKeys}</li>
+                <li>Invalid keys skipped: ${stats.invalidKeys}</li>
+                <li>Duplicate keys skipped: ${stats.duplicateKeys}</li>
+            </ul>
+            <p style="margin-bottom: 8px; margin-top: 4px;"><strong>Found ${keys.length} new API ${keys.length === 1 ? 'key' : 'keys'} to add.</strong></p>
+            <div class="import-actions">
+                <button id="confirmImportBtn" class="btn-add-key">Add ${keys.length} ${keys.length === 1 ? 'key' : 'keys'}</button>
+                <button id="cancelImportBtn" class="btn-cancel">Cancel</button>
+            </div>
+        `;
+
+        // Insert before the buttons
+        const buttonsContainer = document.querySelector('.api-key-buttons');
+        container.appendChild(statsDiv);
+
+        // Add event listeners for confirm/cancel
+        document.getElementById('confirmImportBtn').addEventListener('click', () => {
+            this.confirmImportKeys(keys);
+            statsDiv.remove();
+        });
+
+        document.getElementById('cancelImportBtn').addEventListener('click', () => {
+            statsDiv.remove();
+            this.showMessage('Import cancelled', 'info');
+        });
+    }
+
+    async confirmImportKeys(keys) {
+        try {
+            let addedCount = 0;
+            const existingKeys = this.settingsManager.getApiKeys();
+
+            for (const key of keys) {
+                // Skip duplicates (just in case)
+                if (existingKeys.includes(key)) {
+                    continue;
+                }
+
+                // Add the key
+                await this.settingsManager.addApiKey(key);
+                addedCount++;
+            }
+
+            // Refresh the display
+            const settings = this.settingsManager.getAll();
+            this.renderApiKeyFields(settings.apiKeys || [], settings.currentApiKeyIndex || 0);
+
+            if (addedCount > 0) {
+                this.showMessage(`✅ Successfully added ${addedCount} new API keys`, 'success');
+            } else {
+                this.showMessage('No new keys were added (all were duplicates)', 'info');
+            }
+
+        } catch (error) {
+            console.error('Error importing keys:', error);
+            this.showMessage(`❌ Error importing keys: ${error.message}`, 'error');
+        }
     }
 
     async handleAddApiKey() {
@@ -162,6 +336,99 @@ class SettingsUI {
             this.showMessage('API key added successfully', 'success');
         } catch (error) {
             this.showMessage(`Error adding API key: ${error.message}`, 'error');
+        }
+    }
+
+    handleExportKeys() {
+        const apiKeys = this.settingsManager.getApiKeys();
+
+        if (apiKeys.length === 0) {
+            this.showMessage('No API keys to export', 'error');
+            return;
+        }
+
+        // Show export confirmation with warning
+        this.showExportConfirmation(apiKeys);
+    }
+
+    showExportConfirmation(apiKeys) {
+        const container = document.getElementById('apiKeysContainer');
+
+        // Remove any existing confirmation
+        const existingConfirmation = container.querySelector('.export-confirmation');
+        if (existingConfirmation) {
+            existingConfirmation.remove();
+        }
+
+        // Create confirmation display
+        const confirmationDiv = document.createElement('div');
+        confirmationDiv.className = 'export-confirmation';
+        confirmationDiv.innerHTML = `
+            <p><strong>Export API Keys</strong></p>
+            <p>You are about to export ${apiKeys.length} API key(s) to a text file.</p>
+            <p class="export-warning">⚠️ Warning: API keys are sensitive information. Keep the downloaded file secure!</p>
+            <div class="export-confirmation-buttons">
+                <button id="confirmExportBtn" class="btn-add-key">Download ${apiKeys.length} ${apiKeys.length === 1 ? 'key' : 'keys'}</button>
+                <button id="cancelExportBtn" class="btn-cancel">Cancel</button>
+            </div>
+        `;
+
+        // Insert before the buttons
+        const buttonsContainer = document.querySelector('.api-key-buttons');
+        container.appendChild(confirmationDiv);
+
+        // Add event listeners for confirm/cancel
+        document.getElementById('confirmExportBtn').addEventListener('click', () => {
+            this.confirmExportKeys(apiKeys);
+            confirmationDiv.remove();
+        });
+
+        document.getElementById('cancelExportBtn').addEventListener('click', () => {
+            confirmationDiv.remove();
+            this.showMessage('Export cancelled', 'info');
+        });
+    }
+
+    confirmExportKeys(apiKeys) {
+        try {
+            // Create the text content - one key per line
+            const textContent = apiKeys.join('\n');
+
+            // Add metadata comment at the top (optional)
+            const metadata = [
+                `# Gemini API Keys Export`,
+                `# Generated: ${new Date().toLocaleString()}`,
+                `# Total Keys: ${apiKeys.length}`,
+                `# Keep this file secure!`,
+                ''
+            ].join('\n');
+
+            const fullContent = metadata + textContent;
+
+            // Create a blob and download link
+            const blob = new Blob([fullContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            // Create download link
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'keys.txt';
+
+            // Trigger download
+            document.body.appendChild(a);
+            a.click();
+
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+
+            this.showMessage(`✅ Successfully exported ${apiKeys.length} API keys`, 'success');
+
+        } catch (error) {
+            console.error('Error exporting keys:', error);
+            this.showMessage(`❌ Error exporting keys: ${error.message}`, 'error');
         }
     }
 
