@@ -6,6 +6,42 @@ class DescriptionGenerator {
         this.longDesc = null;
         this.settings = this.getSettings();
         this.init();
+        this.STATIC_PROMPT = `
+You are an expert marketplace product copywriter specializing in medical and surgical products for online sales platforms.
+
+Rules:
+
+* Write SEO-friendly content optimized for medical and healthcare-related searches
+* Use simple, clear, and professional English suitable for end users and healthcare buyers
+* Ensure plagiarism-free and original content
+* Accurately represent the product features, benefits, and real use cases
+* Write from the end-user perspective, focusing on usability, safety, and reliability
+* Use {{productName}} instead of the actual product name
+* Naturally include relevant and easy-to-understand keywords such as medical equipment, surgical instruments, healthcare supplies, hospital use, clinical use, home care, durable, safe, sterile, professional quality, and online medical store where applicable
+* Avoid exaggerated or misleading claims and comply with medical product standards
+
+Generate:
+
+1. Short Description (40–60 words)
+
+   * Brief overview of the product
+   * Key benefit and primary use
+   * Include 1 to 2 high-impact SEO keywords
+
+2. Long Description (120–150 words)
+
+   * Detailed explanation of product purpose, features, and benefits
+   * Suitable applications such as hospital, clinic, or home healthcare use
+   * Highlight quality, safety, and ease of use
+   * Include relevant SEO keywords naturally for better search visibility
+
+Output format:
+Short Description:
+<text>
+
+Long Description:
+<text>
+`;
     }
 
     async init() {
@@ -171,6 +207,10 @@ class DescriptionGenerator {
                     <div class="pdg-content" id="pdg-content">
                         <button class="pdgui-btn primary" data-action="gen-desc">
                             ✨ Generate Description
+                        </button>
+
+                        <button class="pdgui-btn primary" data-action="copy-prompt">
+                            📝 Copy prompt
                         </button>
 
                         <button class="pdgui-btn secondary" data-action="open-options">
@@ -362,20 +402,60 @@ class DescriptionGenerator {
             case 'gen-desc':
                 await this.generateDescription();
                 break;
+            case 'copy-prompt':
+                await this.copyPromptWithProductName();
+                break;
             case 'open-options':
                 if (this.chromeAvailable) {
                     chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+                    this.updateStatus('Ready');
                 }
                 break;
+            default:
+                this.updateStatus('Ready');
         }
-
-        this.updateStatus('Ready');
     }
 
     updateStatus(message) {
         const statusElement = document.getElementById('pdg-status');
         if (statusElement) {
             statusElement.textContent = message;
+        }
+    }
+
+    async copyPromptWithProductName() {
+        try {
+            // Get product name from the form field
+            const productNameElement = document.querySelector("#product_name");
+            const productName = productNameElement ? productNameElement.value.trim() : "";
+
+            // Create the prompt with product name
+            let promptWithProductName = this.STATIC_PROMPT;
+
+            // Add product name to the prompt if it exists
+            if (productName) {
+                promptWithProductName += `\n\nProduct name: ${productName}`;
+            } else {
+                promptWithProductName += `\n\nProduct name: [Enter Product Name Here]`;
+            }
+
+            // Copy to clipboard
+            await navigator.clipboard.writeText(promptWithProductName);
+
+            // Update status with product name info
+            if (productName) {
+                this.updateStatus(`Prompt copied with product: "${productName}"`);
+            } else {
+                this.updateStatus('Prompt copied (no product name found)');
+            }
+
+            setTimeout(() => {
+                this.updateStatus('Ready');
+            }, 3000);
+
+        } catch (error) {
+            console.error('Error copying prompt:', error);
+            this.updateStatus('❌ Error copying prompt');
         }
     }
 
@@ -407,42 +487,6 @@ class DescriptionGenerator {
     }
 
     async generateDescription() {
-        const STATIC_PROMPT = `
-You are an expert marketplace product copywriter specializing in medical and surgical products for online sales platforms.
-
-Rules:
-
-* Write SEO-friendly content optimized for medical and healthcare-related searches
-* Use simple, clear, and professional English suitable for end users and healthcare buyers
-* Ensure plagiarism-free and original content
-* Accurately represent the product features, benefits, and real use cases
-* Write from the end-user perspective, focusing on usability, safety, and reliability
-* Use {{productName}} instead of the actual product name
-* Naturally include relevant and easy-to-understand keywords such as medical equipment, surgical instruments, healthcare supplies, hospital use, clinical use, home care, durable, safe, sterile, professional quality, and online medical store where applicable
-* Avoid exaggerated or misleading claims and comply with medical product standards
-
-Generate:
-
-1. Short Description (40–60 words)
-
-   * Brief overview of the product
-   * Key benefit and primary use
-   * Include 1 to 2 high-impact SEO keywords
-
-2. Long Description (120–150 words)
-
-   * Detailed explanation of product purpose, features, and benefits
-   * Suitable applications such as hospital, clinic, or home healthcare use
-   * Highlight quality, safety, and ease of use
-   * Include relevant SEO keywords naturally for better search visibility
-
-Output format:
-Short Description:
-<text>
-
-Long Description:
-<text>
-`;
 
         // Get form elements
         const productNameElement = document.querySelector("#product_name");
@@ -485,7 +529,7 @@ Long Description:
                 throw new Error("No API Keys configured. Please configure settings.");
             }
 
-            const prompt = `${STATIC_PROMPT}\nProduct name: ${productName}`;
+            const prompt = `${this.STATIC_PROMPT}\nProduct name: ${productName}`;
 
             // Try current API key, if fails due to quota, rotate to next
             let lastError = null;
