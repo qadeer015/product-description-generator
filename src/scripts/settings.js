@@ -1,3 +1,4 @@
+// settings.js
 class Settings {
     constructor() {
         this.settings = this.defaultSettings();
@@ -50,6 +51,7 @@ class Settings {
 
     syncToLocalStorage() {
         try {
+            console.log('Syncing settings to localStorage:->', this.settings);
             localStorage.setItem('product_descripton_generator_settings', JSON.stringify(this.settings));
         } catch (error) {
             console.warn('Error syncing to localStorage:', error);
@@ -64,7 +66,7 @@ class Settings {
                     ...settings
                 };
             }
-
+            console.log('Saving settings to storage:->', this.settings);
             await chrome.storage.sync.set(this.settings);
 
             // Sync to localStorage for quick access

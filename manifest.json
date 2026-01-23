@@ -22,7 +22,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://onlinesalepoint.com/shop/products/*/edit",
+    "https://onlinesalepoint.com/shop/products/*",
     "https://generativelanguage.googleapis.com/*"
   ],
   "icons": {
@@ -48,7 +48,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://onlinesalepoint.com/shop/products/*/edit"
+        "https://onlinesalepoint.com/shop/products/*"
       ],
       "js": [
         "src/scripts/content.js"
